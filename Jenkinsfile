@@ -79,6 +79,30 @@ pipeline {
       }
     }
   }
+  // Send the compiled code to SonarQube for analysis.
+    // 'SonarQube' must match the server name configured in Manage Jenkins > System.
+    stage('SonarQube Analysis') {
+      steps {
+        dir("${env.BACKEND_DIR}") {
+          withSonarQubeEnv('SonarQube') {
+            sh '''
+              mvn -B sonar:sonar \
+                -Dsonar.projectKey=expense-tracker \
+                -Dsonar.projectName=expense-tracker
+            '''
+          }
+        }
+      }
+    }
+
+    // Ask SonarQube for the pass/fail verdict. Requires the webhook (Part 1E).
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
 
   post {
     success {
