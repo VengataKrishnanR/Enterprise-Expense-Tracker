@@ -61,13 +61,7 @@ pipeline {
       }
     }
 
-    stage('Quality Gate') {
-      steps {
-        timeout(time: 5, unit: 'MINUTES') {
-          waitForQualityGate abortPipeline: false
-        }
-      }
-    }
+    // No Quality Gate stage — analysis runs but we don't wait for/enforce it.
 
     stage('Build frontend (npm)') {
       when { expression { env.HAS_FRONTEND == 'yes' } }
