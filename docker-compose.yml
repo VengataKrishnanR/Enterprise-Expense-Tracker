@@ -1,0 +1,92 @@
+# =============================================================================
+#  docker-compose.yml  —  run the to-do app with a single command
+#
+#  Docker Compose lets you define and run one or MORE containers using a single
+#  YAML file, instead of typing long `docker build`/`docker run` commands.
+#
+#  Start everything:   docker compose up --build
+#  Stop everything:    docker compose down
+# =============================================================================
+
+# "services" = the list of containers Compose will manage. Each key under it
+# (here: "todo") is one service = one container.
+services:
+
+  todo:
+    # ---- how to get the image -------------------------------------------
+    # "build" tells Compose to BUILD an image from a Dockerfile instead of
+    # pulling a prebuilt one. "context: ." = build using this folder.
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: "compose-1"   # passed to the Dockerfile's ARG APP_VERSION
+
+    # Also tag the built image with a friendly name.
+    image: todo:compose-1
+
+    # A stable container name (otherwise Compose auto-generates one).
+    container_name: todo-app
+
+    # ---- ports ----------------------------------------------------------
+    # "HOST:CONTAINER" — reach the app at localhost:8080 on your machine,
+    # which maps to port 8080 inside the container (where Spring Boot listens).
+    ports:
+      - "8080:8080"
+
+    # ---- environment variables inside the container --------------------
+    environment:
+      APP_VERSION: "compose-1"
+
+    # ---- restart policy -------------------------------------------------
+    # Restart the container if it crashes or the box reboots (but not if you
+    # manually stop it).
+    restart: unless-stopped
+
+    # ---- health check ---------------------------------------------------
+    # Compose periodically runs this command INSIDE the container to decide if
+    # the app is "healthy". Here we curl the app's own endpoint.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/todos"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s        # grace period while Spring Boot boots
+
+    # ---- network --------------------------------------------------------
+    networks:
+      - todo-net
+
+# -----------------------------------------------------------------------------
+# OPTIONAL: a second service to SEE how Compose runs multiple containers.
+# Our to-do app is in-memory and does NOT use this database yet — it's here
+# purely to demonstrate multi-service Compose. Uncomment to try it.
+# -----------------------------------------------------------------------------
+#  db:
+#    image: postgres:16
+#    container_name: todo-db
+#    environment:
+#      POSTGRES_USER: todo
+#      POSTGRES_PASSWORD: todo
+#      POSTGRES_DB: todo
+#    volumes:
+#      - todo-db-data:/var/lib/postgresql/data   # persist data across restarts
+#    networks:
+#      - todo-net
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U todo"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+
+# "networks" = private virtual networks so services can talk to each other by
+# name (e.g. the app could reach the db at hostname "db"). Compose creates one
+# automatically, but naming it makes the intent explicit.
+networks:
+  todo-net:
+    driver: bridge
+
+# "volumes" = named, persistent storage that survives container restarts.
+# Only needed by the optional db above; harmless to keep declared.
+volumes:
+  todo-db-data:
