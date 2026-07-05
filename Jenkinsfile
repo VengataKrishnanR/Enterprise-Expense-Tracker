@@ -61,8 +61,6 @@ pipeline {
       }
     }
 
-    // No Quality Gate stage — analysis runs but we don't wait for/enforce it.
-
     stage('Build frontend (npm)') {
       when { expression { env.HAS_FRONTEND == 'yes' } }
       steps {
